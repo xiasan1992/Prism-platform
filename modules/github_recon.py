@@ -34,9 +34,9 @@ class GitHubRecon:
         result: Dict[str, Any] = {
             "username": username,
             "profile": None,
-            "repo_count": 0,
-            "total_stars": 0,
-            "top_languages": [],
+            "repo_count": None,
+            "total_stars": None,
+            "top_languages": None,
             "emails": [],
             "commit_emails_checked": None,
             "error": None,
@@ -84,19 +84,20 @@ class GitHubRecon:
             result["commit_emails_checked"] = False
 
             repos, repos_failure = self._get_repos(username)
-            result["repo_count"] = None if repos_failure else len(repos)
-            lang_count: Dict[str, int] = {}
-            stars = 0
-            for repo in repos or []:
-                stars += repo.get("stargazers_count", 0) or 0
-                lang = repo.get("language")
-                if lang:
-                    lang_count[lang] = lang_count.get(lang, 0) + 1
-            result["total_stars"] = stars
-            result["top_languages"] = [
-                {"language": k, "count": v}
-                for k, v in sorted(lang_count.items(), key=lambda x: x[1], reverse=True)[:8]
-            ]
+            if not repos_failure:
+                result["repo_count"] = len(repos)
+                lang_count: Dict[str, int] = {}
+                stars = 0
+                for repo in repos:
+                    stars += repo.get("stargazers_count", 0) or 0
+                    lang = repo.get("language")
+                    if lang:
+                        lang_count[lang] = lang_count.get(lang, 0) + 1
+                result["total_stars"] = stars
+                result["top_languages"] = [
+                    {"language": k, "count": v}
+                    for k, v in sorted(lang_count.items(), key=lambda x: x[1], reverse=True)[:8]
+                ]
 
             commit_emails, events_failure = self._emails_from_events(username)
             if not events_failure:

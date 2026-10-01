@@ -107,6 +107,22 @@ def test_lookup_repos_rate_limited_keeps_profile(monkeypatch):
     assert r["emails"] == ["octo@example.com", "dev@example.com"]
 
 
+def test_lookup_repo_failure_marks_all_repo_metrics_unknown(monkeypatch):
+    import requests
+    monkeypatch.setattr(requests, "get", _profile_then(
+        _Resp(500, {}),
+        _Resp(200, []),
+    ))
+    r = GitHubRecon().lookup("octocat")
+
+    assert classify(r) == ERROR
+    assert r["error"] == "GitHub API returned 500"
+    assert r["profile"]["public_repos"] == 42
+    assert r["repo_count"] is None
+    assert r["total_stars"] is None
+    assert r["top_languages"] is None
+
+
 def test_lookup_events_rate_limited_preserves_profile_email_and_marks_unchecked(monkeypatch):
     import requests
     monkeypatch.setattr(requests, "get", _profile_then(
@@ -168,4 +184,6 @@ def test_lookup_no_emails_found_is_ok_and_empty(monkeypatch):
 
     assert classify(r) == OK
     assert r["repo_count"] == 0
+    assert r["total_stars"] == 0
+    assert r["top_languages"] == []
     assert r["emails"] == []
